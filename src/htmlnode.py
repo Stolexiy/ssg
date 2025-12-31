@@ -1,3 +1,5 @@
+from certifi import contents
+
 
 class HTMLNode:
     def __init__(self, tag = None, value = None, children = None, props = None):
@@ -7,7 +9,12 @@ class HTMLNode:
         self.props = props
 
     def to_html(self):
-        raise NotImplementedError
+        contents = []
+        for child in self.children:
+            contents.append(child.to_html())
+        attr = self.props_to_html()
+        attr = " " + attr if attr else ""
+        return f"<{self.tag}{attr}>{''.join(contents)}</{self.tag}>"
 
     def props_to_html(self):
         if not self.props:
