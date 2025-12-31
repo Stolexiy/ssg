@@ -8,7 +8,7 @@ class LeafNode(HTMLNode):
         if self.value == None:
             raise ValueError("no value")
         if not self.tag:
-            return self.value
+            return self.value.replace("\n", " ")
         attr = self.props_to_html()
         attr = " " + attr if attr else ""
         return f"<{self.tag}{attr}>{self.value}</{self.tag}>"

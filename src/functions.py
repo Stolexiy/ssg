@@ -3,6 +3,9 @@ import re
 from samba.dcerpc.dcerpc import empty
 
 from leafnode import LeafNode
+from blocknode import BlockType
+from parentnode import ParentNode
+from src.htmlnode import HTMLNode
 from textnode import TextType, TextNode
 
 
@@ -102,3 +105,88 @@ def extract_markdown_images(text):
 def extract_markdown_links(text):
     pattern = r"(?<!!)\[(.*?)\]\((.*?)\)"
     return re.findall(pattern, text)
+
+def markdown_to_blocks(markdown):
+    blocks = markdown.split("\n\n")
+    valid_blocks = []
+    for block in blocks:
+        if block:
+            valid_blocks.append(block.strip())
+    return valid_blocks
+
+def block_to_block_type(block):
+    if block.startswith(("# ", "## ", "### ", "#### ", "##### ", "###### ")):
+        return BlockType.HEADING
+
+    if re.match("^```[\s\S]+```$", block) is not None:
+        return BlockType.CODE
+
+    lines = block.strip().split("\n")
+    if len(lines) > 0:
+        if lines[0].startswith("> "):
+            for line in lines[1:]:
+                if not line.startswith("> "):
+                    return BlockType.PARAGRAPH
+            return BlockType.QUOTE
+
+        if lines[0].startswith("- "):
+            for line in lines[1:]:
+                if not line.startswith("- "):
+                    return BlockType.PARAGRAPH
+            return BlockType.UNORDERED_LIST
+
+        if lines[0].startswith("1. "):
+            count = 2
+            for line in lines[1:]:
+                if not line.startswith(f"{count}. "):
+                    return BlockType.PARAGRAPH
+                count += 1
+            return BlockType.ORDERED_LIST
+
+    return BlockType.PARAGRAPH
+
+def text_to_children(text):
+    text_nodes = text_to_textnodes(text)
+    children = []
+    for text_node in text_nodes:
+        children.append(text_node_to_html_node(text_node))
+    return children
+
+def markdown_to_html_node(markdown):
+    blocks = markdown_to_blocks(markdown)
+    children = []
+    for block in blocks:
+        block_type = block_to_block_type(block)
+        match block_type:
+            case BlockType.PARAGRAPH:
+                children.append(ParentNode("p", text_to_children(block)))
+            case BlockType.HEADING:
+                h_size = 0
+                for chr in block:
+                    if chr == '#':
+                        h_size += 1
+                    if h_size >= 6:
+                        break
+                children.append(ParentNode(f"h{h_size}", text_to_children(block[h_size + 1:])))
+            case BlockType.CODE:
+                children.append(ParentNode("pre", [LeafNode("code", block[3:-3].lstrip())]))
+            case BlockType.QUOTE:
+                children.append(ParentNode("blockquote", text_to_children(block[2:].replace("> ", "<br />"))))
+            case BlockType.UNORDERED_LIST:
+                items = block.split("\n")
+                ul = ParentNode("ul", [])
+                for item in items:
+                    if item:
+                        ul.children.append(HTMLNode("li", None, text_to_children(item.replace("- ", "").strip())))
+                children.append(ul)
+            case BlockType.ORDERED_LIST:
+                lines = block.strip().split("\n")
+                ol = ParentNode("ol", [])
+                num = 1
+                for line in lines:
+                    if line.startswith(f"{num}. "):
+                        ol.children.append(HTMLNode("li", None, text_to_children(line.replace(f"{num}. ", "").strip())))
+                        num += 1
+                children.append(ol)
+
+    return ParentNode("div", children)
