@@ -1,7 +1,8 @@
 import unittest
 
 from functions import text_node_to_html_node, split_nodes_delimiter, extract_markdown_images, extract_markdown_links, \
-    split_nodes_image, split_nodes_link, text_to_textnodes
+    split_nodes_image, split_nodes_link, text_to_textnodes, markdown_to_blocks, block_to_block_type
+from blocknode import BlockType
 from textnode import TextNode, TextType
 
 class TestTextToTextNodes(unittest.TestCase):
@@ -324,6 +325,120 @@ class TestExtractMarkdown(unittest.TestCase):
     def test_links(self):
         matches = extract_markdown_links("This is text with a link [to boot dev](https://www.boot.dev) and [to youtube](https://www.youtube.com/@bootdotdev)")
         self.assertListEqual([("to boot dev", "https://www.boot.dev"), ("to youtube", "https://www.youtube.com/@bootdotdev")], matches)
+
+class TestBlocks(unittest.TestCase):
+    def test_markdown_to_blocks(self):
+        md = """
+This is **bolded** paragraph
+
+This is another paragraph with _italic_ text and `code` here
+This is the same paragraph on a new line
+
+- This is a list
+- with items
+"""
+        blocks = markdown_to_blocks(md)
+        self.assertEqual(
+            blocks,
+            [
+                "This is **bolded** paragraph",
+                "This is another paragraph with _italic_ text and `code` here\nThis is the same paragraph on a new line",
+                "- This is a list\n- with items",
+            ],
+        )
+
+    def test_markdown_to_blocks_with_multi_empty_lines(self):
+        md = """
+This is **bolded** paragraph
+
+
+
+
+
+
+This is another paragraph with _italic_ text and `code` here
+This is the same paragraph on a new line
+
+- This is a list
+- with items
+"""
+        blocks = markdown_to_blocks(md)
+        self.assertEqual(
+            blocks,
+            [
+                "This is **bolded** paragraph",
+                "This is another paragraph with _italic_ text and `code` here\nThis is the same paragraph on a new line",
+                "- This is a list\n- with items",
+            ],
+        )
+
+class TestBlockToBlockType(unittest.TestCase):
+    def test_heading(self):
+        block_type = block_to_block_type("### This is header")
+        self.assertEqual(block_type, BlockType.HEADING)
+
+    def test_bad_heading(self):
+        block_type = block_to_block_type("some text ### This is header")
+        self.assertEqual(block_type, BlockType.PARAGRAPH)
+
+    def test_code(self):
+        block_type = block_to_block_type("```this is code block```")
+        self.assertEqual(block_type, BlockType.CODE)
+
+    def test_bad_code(self):
+        block_type = block_to_block_type("some text```this is code block```")
+        self.assertEqual(block_type, BlockType.PARAGRAPH)
+
+    def test_quote(self):
+        block_type = block_to_block_type("""
+> This is quote text
+> another line
+> of the quoted text    
+""")
+        self.assertEqual(block_type, BlockType.QUOTE)
+
+    def test_bad_quote(self):
+        block_type = block_to_block_type("""
+> This is quote text
+> another line
+some text
+> of the quoted text    
+""")
+        self.assertEqual(block_type, BlockType.PARAGRAPH)
+
+    def test_ul(self):
+        block_type = block_to_block_type("""
+- Option 1
+- Option 2
+- Option 3
+""")
+        self.assertEqual(block_type, BlockType.UNORDERED_LIST)
+
+    def test_badul(self):
+        block_type = block_to_block_type("""
+- Option 1
+- Option 2
+some text
+- Option 3
+""")
+        self.assertEqual(block_type, BlockType.PARAGRAPH)
+
+    def test_ol(self):
+        block_type = block_to_block_type("""
+1. Option 1
+2. Option 2
+3. Option 3
+""")
+        self.assertEqual(block_type, BlockType.ORDERED_LIST)
+
+    def test_bad_ol(self):
+        block_type = block_to_block_type("""
+1. Option 1
+2. Option 2
+some text
+3. Option 3
+""")
+        self.assertEqual(block_type, BlockType.PARAGRAPH)
 
 if __name__ == "__main__":
     unittest.main()

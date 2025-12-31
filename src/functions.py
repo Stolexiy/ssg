@@ -3,6 +3,7 @@ import re
 from samba.dcerpc.dcerpc import empty
 
 from leafnode import LeafNode
+from blocknode import BlockType
 from textnode import TextType, TextNode
 
 
@@ -102,3 +103,42 @@ def extract_markdown_images(text):
 def extract_markdown_links(text):
     pattern = r"(?<!!)\[(.*?)\]\((.*?)\)"
     return re.findall(pattern, text)
+
+def markdown_to_blocks(markdown):
+    blocks = markdown.split("\n\n")
+    valid_blocks = []
+    for block in blocks:
+        if block:
+            valid_blocks.append(block.strip())
+    return valid_blocks
+
+def block_to_block_type(block):
+    if block.startswith(("#", "##", "###", "####", "#####", "######")):
+        return BlockType.HEADING
+
+    if re.match("^```[\s\S]+```$", block) is not None:
+        return BlockType.CODE
+
+    lines = block.strip().split("\n")
+    if len(lines) > 0:
+        if lines[0].startswith(">"):
+            for line in lines[1:]:
+                if not line.startswith(">"):
+                    return BlockType.PARAGRAPH
+            return BlockType.QUOTE
+
+        if lines[0].startswith("- "):
+            for line in lines[1:]:
+                if not line.startswith("- "):
+                    return BlockType.PARAGRAPH
+            return BlockType.UNORDERED_LIST
+
+        if lines[0].startswith("1. "):
+            count = 2
+            for line in lines[1:]:
+                if not line.startswith(f"{count}. "):
+                    return BlockType.PARAGRAPH
+                count += 1
+            return BlockType.ORDERED_LIST
+
+    return BlockType.PARAGRAPH
