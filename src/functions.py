@@ -1,11 +1,13 @@
+import os
 import re
+import shutil
 
 from samba.dcerpc.dcerpc import empty
 
 from leafnode import LeafNode
 from blocknode import BlockType
 from parentnode import ParentNode
-from src.htmlnode import HTMLNode
+from htmlnode import HTMLNode
 from textnode import TextType, TextNode
 
 
@@ -190,3 +192,28 @@ def markdown_to_html_node(markdown):
                 children.append(ol)
 
     return ParentNode("div", children)
+
+def prepare_public():
+    if os.path.exists("./public"):
+        print("Delete public folder")
+        shutil.rmtree("./public")
+
+    print("Copy files to ../public")
+    copy_tree("./static", "./public")
+
+def copy_tree(src, dst):
+    if not os.path.exists(src):
+        raise Exception("Source directory does not exist")
+    if not os.path.exists(dst):
+        print("Create folder " + dst)
+        os.mkdir(dst)
+
+    tree = os.listdir(src)
+    for el in tree:
+        el_src = os.path.join(src, el)
+        el_dst = os.path.join(dst, el)
+        if os.path.isfile(el_src):
+            print("Copy file " + el_src + " to " + el_dst)
+            shutil.copy(el_src, el_dst)
+        else:
+            copy_tree(el_src, el_dst)

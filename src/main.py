@@ -1,7 +1,6 @@
-from textnode import TextNode, TextType
+from functions import prepare_public
 
 def main():
-    node = TextNode("This is some anchor text", TextType.LINK, "https://www.boot.dev")
-    print(node)
+    prepare_public()
 
 main()
