@@ -127,7 +127,7 @@ def block_to_block_type(block):
     if len(lines) > 0:
         if lines[0].startswith("> "):
             for line in lines[1:]:
-                if not line.startswith("> "):
+                if not line.startswith("> ") and line != ">":
                     return BlockType.PARAGRAPH
             return BlockType.QUOTE
 
@@ -173,7 +173,7 @@ def markdown_to_html_node(markdown):
             case BlockType.CODE:
                 children.append(ParentNode("pre", [LeafNode("code", block[3:-3].lstrip())]))
             case BlockType.QUOTE:
-                children.append(ParentNode("blockquote", text_to_children(block[2:].replace("> ", "<br />"))))
+                children.append(ParentNode("blockquote", text_to_children(block[2:].replace("\n>", ""))))
             case BlockType.UNORDERED_LIST:
                 items = block.split("\n")
                 ul = ParentNode("ul", [])
@@ -217,3 +217,32 @@ def copy_tree(src, dst):
             shutil.copy(el_src, el_dst)
         else:
             copy_tree(el_src, el_dst)
+
+def extract_title(markdown):
+    lines = markdown.split("\n")
+    for line in lines:
+        if line.startswith("# "):
+            return line[2:].strip()
+    raise Exception("No title found in markdown")
+
+def generate_page(from_path, template_path, dest_path):
+    print(f"Generating page from { from_path } to { dest_path } using { template_path }")
+    if not os.path.exists(from_path):
+        raise Exception("Page does not exist")
+    if not os.path.exists(template_path):
+        raise Exception("Template does not exist")
+
+    with open(from_path) as f:
+      content = f.read()
+
+    with open(template_path) as f:
+      template = f.read()
+
+    title = extract_title(content)
+    content_html = markdown_to_html_node(content).to_html()
+
+    page_html = template.replace("{{ Title }}", title).replace("{{ Content }}", content_html)
+    with open(dest_path, "w+") as f:
+      f.write(page_html)
+
+

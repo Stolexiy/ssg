@@ -2,7 +2,7 @@ import unittest
 
 from functions import text_node_to_html_node, split_nodes_delimiter, extract_markdown_images, extract_markdown_links, \
     split_nodes_image, split_nodes_link, text_to_textnodes, markdown_to_blocks, block_to_block_type, \
-    markdown_to_html_node
+    markdown_to_html_node, extract_title
 from blocknode import BlockType
 from textnode import TextNode, TextType
 
@@ -500,6 +500,7 @@ the **same** even with inline stuff
     def test_blockquote(self):
         md = """
 > This is quote line
+>
 > another line with **bold**
 
 >not the the quoted text    
@@ -509,7 +510,7 @@ the **same** even with inline stuff
         html = node.to_html()
         self.assertEqual(
             html,
-            "<div><blockquote>This is quote line <br />another line with <b>bold</b></blockquote><p>>not the the quoted text</p></div>",
+            "<div><blockquote>This is quote line another line with <b>bold</b></blockquote><p>>not the the quoted text</p></div>",
         )
 
     def test_ul(self):
@@ -547,6 +548,36 @@ the **same** even with inline stuff
             html,
             "<div><ol><li>Option 1</li><li>Option <b>2</b> bolded</li><li>Option 3</li></ol><p>1.not the the option</p><p>1. Option 1 3. Option <b>3</b> bolded 4. Option 4</p></div>",
         )
+
+class TestGenerate(unittest.TestCase):
+    def test_title_extract(self):
+        md = """
+# This is page title
+        
+This is **bolded** paragraph
+text in a p
+tag here
+
+This is another paragraph with _italic_ text and `code` here
+
+"""
+        title = extract_title(md)
+        self.assertEqual(title, "This is page title")
+
+    def test_title_extract_no_title(self):
+        md = """
+## This is page secondary title
+
+This is **bolded** paragraph
+text in a p
+tag here
+
+This is another paragraph with _italic_ text and `code` here
+
+"""
+        with self.assertRaisesRegex(Exception, "No title found in markdown"):
+            extract_title(md)
+
 
 if __name__ == "__main__":
     unittest.main()
