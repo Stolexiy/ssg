@@ -242,7 +242,24 @@ def generate_page(from_path, template_path, dest_path):
     content_html = markdown_to_html_node(content).to_html()
 
     page_html = template.replace("{{ Title }}", title).replace("{{ Content }}", content_html)
+    dirname = os.path.dirname(dest_path)
+    os.makedirs(dirname, exist_ok=True)
     with open(dest_path, "w+") as f:
       f.write(page_html)
 
+def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
+    if not os.path.exists(dir_path_content):
+        raise Exception("Content directory does not exist")
+    if not os.path.exists(template_path):
+        raise Exception("Template does not exist")
 
+    tree = os.listdir(dir_path_content)
+    for el in tree:
+        source = os.path.join(dir_path_content, el)
+        if os.path.isfile(source):
+            if source.endswith(".md"):
+                html_file = os.path.join(dest_dir_path, el.replace(".md", ".html"))
+                generate_page(source, template_path, html_file)
+        else:
+            dest = os.path.join(dest_dir_path, el)
+            generate_pages_recursive(source, template_path, dest)

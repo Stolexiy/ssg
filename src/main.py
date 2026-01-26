@@ -1,8 +1,8 @@
-from functions import prepare_public, generate_page
+from functions import prepare_public, generate_pages_recursive
 
 
 def main():
     prepare_public()
-    generate_page("content/index.md", "template.html", "public/index.html")
+    generate_pages_recursive("content", "template.html", "public")
 
 main()
